@@ -1,0 +1,10 @@
+name: Seated Sidekick Spectator
+author: Cytraen
+punchline: Get notified when someone enters or exits your mount!
+description: Adds chat or toast notifications whenever someone enters or exits your mount.
+repo_url: https://github.com/Cytraen/SeatedSidekickSpectator
+accepts_feedback: true
+tags:
+  - utility
+category_tags:
+  - Utility
