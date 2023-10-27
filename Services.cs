@@ -11,8 +11,6 @@ internal class Services
 
 	[PluginService] public static IClientState ClientState { get; private set; } = null!;
 
-	[PluginService] public static ICondition Condition { get; private set; } = null!;
-
 	[PluginService] public static ICommandManager CommandManager { get; private set; } = null!;
 
 	[PluginService] public static IChatGui ChatGui { get; private set; } = null!;
@@ -29,11 +27,9 @@ internal class Services
 
 	[PluginService] public static IDataManager DataManager { get; private set; } = null!;
 
-	[PluginService] public static IPartyList PartyList { get; private set; } = null!;
-
 	[PluginService] public static IGameInteropProvider GameInteropProvider { get; private set; } = null!;
 
 	public static Configuration Config { get; internal set; } = null!;
 
-	public static Dictionary<string, byte> MountMembers { get; internal set; } = new();
+	public static Dictionary<byte, uint> MountMembers { get; internal set; } = new();
 }

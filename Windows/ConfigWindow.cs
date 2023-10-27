@@ -1,6 +1,10 @@
+using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Game.Text;
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
+using Lumina.Excel.GeneratedSheets;
 using System.Numerics;
+using CharacterStruct = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
 
 namespace SeatedSidekickSpectator.Windows;
 
@@ -19,19 +23,12 @@ internal class ConfigWindow : Window, IDisposable
 		GC.SuppressFinalize(this);
 	}
 
-	public override void Draw()
+	public override unsafe void Draw()
 	{
 		var showInChatWindow = Services.Config.ShowChatNotifications;
 		var showToast = Services.Config.ShowToastNotifications;
-		var showImGuiWindow = Services.Config.ShowListWindow;
 
 		var changed = false;
-
-		if (ImGui.Checkbox("Show in chat window", ref showInChatWindow))
-		{
-			Services.Config.ShowChatNotifications = showInChatWindow;
-			changed = true;
-		}
 
 		if (ImGui.Checkbox("Show in toast", ref showToast))
 		{
@@ -39,9 +36,9 @@ internal class ConfigWindow : Window, IDisposable
 			changed = true;
 		}
 
-		if (ImGui.Checkbox("Show in new window", ref showImGuiWindow))
+		if (ImGui.Checkbox("Show in chat window", ref showInChatWindow))
 		{
-			Services.Config.ShowListWindow = showImGuiWindow;
+			Services.Config.ShowChatNotifications = showInChatWindow;
 			changed = true;
 		}
 
@@ -50,9 +47,25 @@ internal class ConfigWindow : Window, IDisposable
 			Services.Config.Save();
 		}
 
-		for (var i = 1; i < 8; i++)
+		ImGui.NewLine();
+
+		for (byte i = 1; i < 8; i++)
 		{
-			ImGui.Text($"{i}. {Services.MountMembers.FirstOrDefault(x => x.Value == i).Key}");
+			if (Services.MountMembers.TryGetValue(i, out var objId) && Services.ObjectTable.SearchById(objId) is Character passenger)
+			{
+				var passengerStruct = (CharacterStruct*)passenger.Address;
+				var passengerName = passenger.Name.TextValue;
+				var passengerWorldName = Services.DataManager.GetExcelSheet<World>()
+					?.GetRow(passengerStruct->HomeWorld)?.Name.ToString();
+
+				var passengerNameString = passengerName + (char)SeIconChar.CrossWorld + passengerWorldName;
+
+				ImGui.Text($"{i}. {passengerNameString}");
+			}
+			else
+			{
+				ImGui.Text($"{i}.");
+			}
 		}
 	}
 }

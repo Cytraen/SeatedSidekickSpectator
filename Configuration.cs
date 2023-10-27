@@ -11,8 +11,6 @@ public class Configuration : IPluginConfiguration
 
 	public bool ShowChatNotifications { get; set; } = false;
 
-	public bool ShowListWindow { get; set; } = false;
-
 	public void Save()
 	{
 		Services.PluginInterface.SavePluginConfig(this);

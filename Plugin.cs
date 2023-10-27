@@ -1,4 +1,3 @@
-using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
@@ -11,8 +10,7 @@ internal class Plugin : IDalamudPlugin
 	private const string ConfigWindowCommandName = "/sss";
 	private readonly WindowSystem _windowSystem;
 	private readonly ConfigWindow _configWindow;
-	private readonly MountHook _mountHook;
-	private readonly DismountHook _dismountHook;
+	private readonly SetModeHook _setModeHook;
 
 	public Plugin(DalamudPluginInterface pluginInterface)
 	{
@@ -29,45 +27,20 @@ internal class Plugin : IDalamudPlugin
 			HelpMessage = "Opens the Seated Sidekick Spectator config window."
 		});
 
-		Services.Condition.ConditionChange += OnConditionChange;
 		Services.PluginInterface.UiBuilder.Draw += DrawUi;
 		Services.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUi;
 
-		_mountHook = new MountHook();
-		_dismountHook = new DismountHook();
-	}
-
-	public void OnConditionChange(ConditionFlag flag, bool state)
-	{
-		if (flag is not (ConditionFlag.Mounted or ConditionFlag.Mounted2))
-		{
-			return;
-		}
-		Services.MountMembers.Clear();
-		if (state)
-		{
-			_mountHook.Enable();
-			_dismountHook.Enable();
-			Services.PluginLog.Debug("Started listening for mounts/dismounts");
-		}
-		else
-		{
-			Services.PluginLog.Debug("Stopped listening for mounts/dismounts");
-			_mountHook.Disable();
-			_dismountHook.Disable();
-		}
+		_setModeHook = new SetModeHook();
 	}
 
 	public void Dispose()
 	{
-		_mountHook.Dispose();
-		_dismountHook.Dispose();
+		_setModeHook.Dispose();
 
 		Services.CommandManager.RemoveHandler(ConfigWindowCommandName);
 		_windowSystem.RemoveAllWindows();
 		_configWindow.Dispose();
 
-		Services.Condition.ConditionChange -= OnConditionChange;
 		Services.PluginInterface.UiBuilder.Draw -= DrawUi;
 		Services.PluginInterface.UiBuilder.OpenConfigUi -= DrawConfigUi;
 	}
