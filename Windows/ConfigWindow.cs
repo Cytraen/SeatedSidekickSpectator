@@ -49,6 +49,8 @@ internal class ConfigWindow : Window, IDisposable
 
 		ImGui.NewLine();
 
+		ImGui.Text("Passengers:");
+
 		for (byte i = 1; i < 8; i++)
 		{
 			if (Services.MountMembers.TryGetValue(i, out var objId) && Services.ObjectTable.SearchById(objId) is Character passenger)

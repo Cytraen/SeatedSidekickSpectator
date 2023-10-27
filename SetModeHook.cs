@@ -98,7 +98,7 @@ internal unsafe class SetModeHook : IDisposable
 		}
 		else
 		{
-			Services.MountMembers.Remove(oldModeParam);
+			if (!Services.MountMembers.Remove(oldModeParam)) return;
 		}
 
 		var notifSeString = new SeString(new List<Payload>
