@@ -37,8 +37,8 @@ internal unsafe class SetModeHook : IDisposable
 			return;
 		}
 
-		if (oldCharMode is not (CharacterStruct.CharacterModes.Mounted or (CharacterStruct.CharacterModes)10)
-			&& newCharMode is not (CharacterStruct.CharacterModes.Mounted or (CharacterStruct.CharacterModes)10))
+		if (oldCharMode is not (CharacterStruct.CharacterModes.Mounted or CharacterStruct.CharacterModes.RidingPillion)
+			&& newCharMode is not (CharacterStruct.CharacterModes.Mounted or CharacterStruct.CharacterModes.RidingPillion))
 		{
 			return;
 		}
@@ -68,7 +68,7 @@ internal unsafe class SetModeHook : IDisposable
 						if (!Services.MountMembers.TryGetValue(i, out var objId)) continue;
 
 						if (Services.ObjectTable.SearchById(objId) is not Character passenger ||
-							((CharacterStruct*)passenger.Address)->Mode != (CharacterStruct.CharacterModes)10)
+							((CharacterStruct*)passenger.Address)->Mode != CharacterStruct.CharacterModes.RidingPillion)
 						{
 							Services.MountMembers.Remove(i);
 						}
@@ -78,7 +78,7 @@ internal unsafe class SetModeHook : IDisposable
 			return;
 		}
 
-		if (oldCharMode is not (CharacterStruct.CharacterModes)10 && newCharMode is not (CharacterStruct.CharacterModes)10)
+		if (oldCharMode is not CharacterStruct.CharacterModes.RidingPillion && newCharMode is not CharacterStruct.CharacterModes.RidingPillion)
 		{
 			return;
 		}
@@ -87,7 +87,7 @@ internal unsafe class SetModeHook : IDisposable
 		var setCharWorldName = Services.DataManager.GetExcelSheet<World>()
 			?.GetRow(setCharStruct->HomeWorld)?.Name.ToString();
 
-		if (newCharMode is (CharacterStruct.CharacterModes)10)
+		if (newCharMode is CharacterStruct.CharacterModes.RidingPillion)
 		{
 			if (targetId != Services.ClientState.LocalPlayer.ObjectId)
 			{
@@ -106,7 +106,7 @@ internal unsafe class SetModeHook : IDisposable
 			new TextPayload(setCharName),
 			new IconPayload(BitmapFontIcon.CrossWorld),
 			new TextPayload(setCharWorldName),
-			new TextPayload($" {(newCharMode is (CharacterStruct.CharacterModes)10 ? "boarded" : "exited")} your mount.")
+			new TextPayload($" {(newCharMode is CharacterStruct.CharacterModes.RidingPillion ? "boarded" : "exited")} your mount.")
 		});
 
 		if (Services.Config.ShowChatNotifications) Services.ChatGui.Print(notifSeString);
