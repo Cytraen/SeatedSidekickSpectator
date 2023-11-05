@@ -1,7 +1,10 @@
+using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using SeatedSidekickSpectator.Windows;
+using CharacterModes = FFXIVClientStructs.FFXIV.Client.Game.Character.Character.CharacterModes;
+using CharacterStruct = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
 
 namespace SeatedSidekickSpectator;
 
@@ -31,6 +34,24 @@ internal class Plugin : IDalamudPlugin
 		Services.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUi;
 
 		_setModeHook = new SetModeHook();
+		InitMountMembers();
+	}
+
+	public unsafe void InitMountMembers()
+	{
+		if (Services.ClientState.LocalPlayer is null || ((CharacterStruct*)Services.ClientState.LocalPlayer.Address)->Mode != CharacterModes.Mounted) return;
+
+		for (var i = 0; i < 100; i++)
+		{
+			if (Services.ObjectTable[i * 2] is not Character character) continue;
+
+			var charStruct = (CharacterStruct*)character.Address;
+			if (charStruct->Mode == CharacterModes.RidingPillion
+				&& charStruct->GameObject.OwnerID == Services.ClientState.LocalPlayer.ObjectId)
+			{
+				Services.MountMembers[charStruct->ModeParam] = charStruct->GameObject.GetObjectID().ObjectID;
+			}
+		}
 	}
 
 	public void Dispose()

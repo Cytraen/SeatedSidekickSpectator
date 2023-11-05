@@ -3,6 +3,7 @@ using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Hooking;
 using Lumina.Excel.GeneratedSheets;
+using CharacterModes = FFXIVClientStructs.FFXIV.Client.Game.Character.Character.CharacterModes;
 using CharacterStruct = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
 
 namespace SeatedSidekickSpectator;
@@ -11,7 +12,7 @@ internal unsafe class SetModeHook : IDisposable
 {
 	private const string SetModeSig = "E8 ?? ?? ?? ?? 48 8B 4B 08 44 8B CF";
 
-	private delegate void SetModeDelegate(CharacterStruct* a1, CharacterStruct.CharacterModes a2, byte a3);
+	private delegate void SetModeDelegate(CharacterStruct* a1, CharacterModes a2, byte a3);
 
 	private readonly Hook<SetModeDelegate> _hook;
 
@@ -24,11 +25,10 @@ internal unsafe class SetModeHook : IDisposable
 		Enable();
 	}
 
-	private void SetModeDetour(CharacterStruct* setCharStruct, CharacterStruct.CharacterModes newCharMode, byte newModeParam)
+	private void SetModeDetour(CharacterStruct* setCharStruct, CharacterModes newCharMode, byte newModeParam)
 	{
 		var oldCharMode = setCharStruct->Mode;
 		var oldModeParam = setCharStruct->ModeParam;
-		var targetId = setCharStruct->GetTargetId();
 
 		_hook.Original(setCharStruct, newCharMode, newModeParam);
 
@@ -37,8 +37,8 @@ internal unsafe class SetModeHook : IDisposable
 			return;
 		}
 
-		if (oldCharMode is not (CharacterStruct.CharacterModes.Mounted or CharacterStruct.CharacterModes.RidingPillion)
-			&& newCharMode is not (CharacterStruct.CharacterModes.Mounted or CharacterStruct.CharacterModes.RidingPillion))
+		if (oldCharMode is not (CharacterModes.Mounted or CharacterModes.RidingPillion)
+			&& newCharMode is not (CharacterModes.Mounted or CharacterModes.RidingPillion))
 		{
 			return;
 		}
@@ -56,10 +56,10 @@ internal unsafe class SetModeHook : IDisposable
 		}
 
 		if (setCharStruct->GameObject.GetObjectID() == Services.ClientState.LocalPlayer.ObjectId
-			&& (oldCharMode is CharacterStruct.CharacterModes.Mounted || newCharMode is CharacterStruct.CharacterModes.Mounted))
+			&& (oldCharMode is CharacterModes.Mounted || newCharMode is CharacterModes.Mounted))
 		{
-			if (oldCharMode == CharacterStruct.CharacterModes.Normal &&
-				newCharMode == CharacterStruct.CharacterModes.Mounted)
+			if (oldCharMode == CharacterModes.Normal &&
+				newCharMode == CharacterModes.Mounted)
 			{
 				Services.Framework.RunOnTick(() =>
 				{
@@ -68,7 +68,7 @@ internal unsafe class SetModeHook : IDisposable
 						if (!Services.MountMembers.TryGetValue(i, out var objId)) continue;
 
 						if (Services.ObjectTable.SearchById(objId) is not Character passenger ||
-							((CharacterStruct*)passenger.Address)->Mode != CharacterStruct.CharacterModes.RidingPillion)
+							((CharacterStruct*)passenger.Address)->Mode != CharacterModes.RidingPillion)
 						{
 							Services.MountMembers.Remove(i);
 						}
@@ -78,7 +78,7 @@ internal unsafe class SetModeHook : IDisposable
 			return;
 		}
 
-		if (oldCharMode is not CharacterStruct.CharacterModes.RidingPillion && newCharMode is not CharacterStruct.CharacterModes.RidingPillion)
+		if (oldCharMode is not CharacterModes.RidingPillion && newCharMode is not CharacterModes.RidingPillion)
 		{
 			return;
 		}
@@ -87,13 +87,17 @@ internal unsafe class SetModeHook : IDisposable
 		var setCharWorldName = Services.DataManager.GetExcelSheet<World>()
 			?.GetRow(setCharStruct->HomeWorld)?.Name.ToString();
 
-		if (newCharMode is CharacterStruct.CharacterModes.RidingPillion)
+		if (newCharMode is CharacterModes.RidingPillion)
 		{
-			if (targetId != Services.ClientState.LocalPlayer.ObjectId)
+			if (setChar.OwnerId != Services.ClientState.LocalPlayer.ObjectId)
 			{
 				return;
 			}
 
+			if (Services.MountMembers.TryGetValue(newModeParam, out var currentSeatId) && currentSeatId == setChar.ObjectId)
+			{
+				return;
+			}
 			Services.MountMembers[newModeParam] = setChar.ObjectId;
 		}
 		else
@@ -106,7 +110,7 @@ internal unsafe class SetModeHook : IDisposable
 			new TextPayload(setCharName),
 			new IconPayload(BitmapFontIcon.CrossWorld),
 			new TextPayload(setCharWorldName),
-			new TextPayload($" {(newCharMode is CharacterStruct.CharacterModes.RidingPillion ? "boarded" : "exited")} your mount.")
+			new TextPayload($" {(newCharMode is CharacterModes.RidingPillion ? "boarded" : "exited")} your mount.")
 		});
 
 		if (Services.Config.ShowChatNotifications) Services.ChatGui.Print(notifSeString);
