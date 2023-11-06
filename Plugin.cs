@@ -33,6 +33,7 @@ internal class Plugin : IDalamudPlugin
 		Services.PluginInterface.UiBuilder.Draw += DrawUi;
 		Services.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUi;
 
+		Services.ClientState.TerritoryChanged += OnTerritoryChanged;
 		_setModeHook = new SetModeHook();
 		InitMountMembers();
 	}
@@ -54,8 +55,27 @@ internal class Plugin : IDalamudPlugin
 		}
 	}
 
+	public unsafe void OnTerritoryChanged(ushort _)
+	{
+		_setModeHook.Disable();
+		Services.Framework.RunOnTick(() =>
+		{
+			for (byte i = 1; i < 8; i++)
+			{
+				if (!Services.MountMembers.TryGetValue(i, out var objId)) continue;
+
+				if (Services.ObjectTable.SearchById(objId) is not Character passenger ||
+					((CharacterStruct*)passenger.Address)->Mode != CharacterModes.RidingPillion)
+				{
+					Services.MountMembers.Remove(i);
+				}
+			}
+		}, delayTicks: 0);
+	}
+
 	public void Dispose()
 	{
+		Services.ClientState.TerritoryChanged -= OnTerritoryChanged;
 		_setModeHook.Dispose();
 
 		Services.CommandManager.RemoveHandler(ConfigWindowCommandName);

@@ -1,4 +1,3 @@
-using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Hooking;
@@ -25,96 +24,57 @@ internal unsafe class SetModeHook : IDisposable
 		Enable();
 	}
 
-	private void SetModeDetour(CharacterStruct* setCharStruct, CharacterModes newCharMode, byte newModeParam)
+	private void SetModeDetour(CharacterStruct* setCharStruct, CharacterModes newCharMode,
+		byte newModeParam)
 	{
 		var oldCharMode = setCharStruct->Mode;
 		var oldModeParam = setCharStruct->ModeParam;
 
 		_hook.Original(setCharStruct, newCharMode, newModeParam);
 
-		if (oldCharMode == newCharMode && oldModeParam == newModeParam)
+		if (Services.ClientState.LocalPlayer!.ObjectId == setCharStruct->GameObject.GetObjectID().ObjectID
+			|| (oldCharMode == newCharMode && oldModeParam == newModeParam)
+			|| (oldCharMode is not CharacterModes.RidingPillion && newCharMode is not CharacterModes.RidingPillion))
 		{
 			return;
 		}
 
-		if (oldCharMode is not (CharacterModes.Mounted or CharacterModes.RidingPillion)
-			&& newCharMode is not (CharacterModes.Mounted or CharacterModes.RidingPillion))
-		{
-			return;
-		}
-
-		if (Services.ObjectTable.CreateObjectReference((nint)setCharStruct) is not Character setChar)
-		{
-			Services.PluginLog.Warning("SetMode called on non-Character?");
-			return;
-		}
-
-		if (Services.ClientState.LocalPlayer is null)
-		{
-			Services.PluginLog.Warning("null LocalPlayer witnessed SetMode?");
-			return;
-		}
-
-		if (setCharStruct->GameObject.GetObjectID() == Services.ClientState.LocalPlayer.ObjectId
-			&& (oldCharMode is CharacterModes.Mounted || newCharMode is CharacterModes.Mounted))
-		{
-			if (oldCharMode == CharacterModes.Normal &&
-				newCharMode == CharacterModes.Mounted)
-			{
-				Services.Framework.RunOnTick(() =>
-				{
-					for (byte i = 1; i < 8; i++)
-					{
-						if (!Services.MountMembers.TryGetValue(i, out var objId)) continue;
-
-						if (Services.ObjectTable.SearchById(objId) is not Character passenger ||
-							((CharacterStruct*)passenger.Address)->Mode != CharacterModes.RidingPillion)
-						{
-							Services.MountMembers.Remove(i);
-						}
-					}
-				}, delayTicks: 0);
-			}
-			return;
-		}
-
-		if (oldCharMode is not CharacterModes.RidingPillion && newCharMode is not CharacterModes.RidingPillion)
-		{
-			return;
-		}
-
-		var setCharName = setChar.Name.TextValue;
+		var setChar = Services.ObjectTable.CreateObjectReference((nint)setCharStruct);
+		var setCharName = setChar!.Name.TextValue;
 		var setCharWorldName = Services.DataManager.GetExcelSheet<World>()
 			?.GetRow(setCharStruct->HomeWorld)?.Name.ToString();
-
-		if (newCharMode is CharacterModes.RidingPillion)
-		{
-			if (setChar.OwnerId != Services.ClientState.LocalPlayer.ObjectId)
-			{
-				return;
-			}
-
-			if (Services.MountMembers.TryGetValue(newModeParam, out var currentSeatId) && currentSeatId == setChar.ObjectId)
-			{
-				return;
-			}
-			Services.MountMembers[newModeParam] = setChar.ObjectId;
-		}
-		else
-		{
-			if (!Services.MountMembers.Remove(oldModeParam)) return;
-		}
 
 		var notifSeString = new SeString(new List<Payload>
 		{
 			new TextPayload(setCharName),
 			new IconPayload(BitmapFontIcon.CrossWorld),
 			new TextPayload(setCharWorldName),
-			new TextPayload($" {(newCharMode is CharacterModes.RidingPillion ? "boarded" : "exited")} your mount.")
+			new TextPayload(
+				$" {(newCharMode is CharacterModes.RidingPillion ? "boarded" : "exited")} your mount.")
 		});
 
-		if (Services.Config.ShowChatNotifications) Services.ChatGui.Print(notifSeString);
-		if (Services.Config.ShowToastNotifications) Services.ToastGui.ShowNormal(notifSeString);
+		if (newCharMode is CharacterModes.RidingPillion)
+		{
+			if (setChar.OwnerId != Services.ClientState.LocalPlayer.ObjectId) return;
+
+			if (Services.MountMembers.TryGetValue(newModeParam, out var currentSeatId) &&
+				currentSeatId == setChar.ObjectId) return;
+			Services.MountMembers[newModeParam] = setChar.ObjectId;
+			if (Services.Config.ShowChatNotifications) Services.ChatGui.Print(notifSeString);
+			if (Services.Config.ShowToastNotifications) Services.ToastGui.ShowNormal(notifSeString);
+		}
+		else
+		{
+			if (!Services.MountMembers.Remove(oldModeParam)) return;
+
+			Services.Framework.RunOnTick(() =>
+			{
+				if (((CharacterStruct*)Services.ClientState.LocalPlayer.Address)->Mode !=
+					CharacterModes.Mounted) return;
+				if (Services.Config.ShowChatNotifications) Services.ChatGui.Print(notifSeString);
+				if (Services.Config.ShowToastNotifications) Services.ToastGui.ShowNormal(notifSeString);
+			});
+		}
 	}
 
 	internal void Enable()
