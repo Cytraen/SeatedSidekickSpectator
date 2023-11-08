@@ -32,6 +32,12 @@ internal unsafe class SetModeHook : IDisposable
 
 		_hook.Original(setCharStruct, newCharMode, newModeParam);
 
+		if (Services.ClientState.LocalPlayer is null)
+		{
+			// apparently SetMode gets called when going to character select
+			return;
+		}
+
 		if (Services.ClientState.LocalPlayer!.ObjectId == setCharStruct->GameObject.GetObjectID().ObjectID
 			|| (oldCharMode == newCharMode && oldModeParam == newModeParam)
 			|| (oldCharMode is not CharacterModes.RidingPillion && newCharMode is not CharacterModes.RidingPillion))
