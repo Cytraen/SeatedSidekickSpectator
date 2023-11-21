@@ -1,7 +1,9 @@
 using Dalamud.Game;
+using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using SeatedSidekickSpectator.Windows;
 
 namespace SeatedSidekickSpectator;
 
@@ -17,6 +19,8 @@ internal class Services
 
 	[PluginService] public static IToastGui ToastGui { get; private set; } = null!;
 
+	[PluginService] public static ICondition Condition { get; private set; } = null!;
+
 	[PluginService] public static IPluginLog PluginLog { get; private set; } = null!;
 
 	[PluginService] public static IFramework Framework { get; private set; } = null!;
@@ -29,7 +33,15 @@ internal class Services
 
 	[PluginService] public static IGameInteropProvider GameInteropProvider { get; private set; } = null!;
 
-	public static Configuration Config { get; internal set; } = null!;
+	internal static Configuration Config = null!;
 
-	public static Dictionary<byte, uint> MountMembers { get; internal set; } = new();
+	internal static Dictionary<byte, Tuple<uint, string>> MountMembers = new();
+
+	internal static WindowSystem WindowSystem = new("SeatedSidekickSpectator");
+
+	internal static ConfigWindow ConfigWindow = null!;
+
+	internal static PassengerListWindow PassengerListWindow = null!;
+
+	internal static SetModeHook SetModeHook = null!;
 }

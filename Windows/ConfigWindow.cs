@@ -1,21 +1,20 @@
-using Dalamud.Game.ClientState.Objects.Types;
-using Dalamud.Game.Text;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
-using Lumina.Excel.GeneratedSheets;
 using System.Numerics;
-using CharacterStruct = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
 
 namespace SeatedSidekickSpectator.Windows;
 
 internal class ConfigWindow : Window, IDisposable
 {
+	public const string WindowTitle = "Seated Sidekick Spectator Settings";
+
 	internal ConfigWindow() : base(
-		"Seated Sidekick Spectator Settings",
+		WindowTitle,
 		ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
 	{
-		Size = new Vector2(350, 400);
-		SizeCondition = ImGuiCond.FirstUseEver;
+		Size = new Vector2(Helpers.CalcTextSize(WindowTitle).X + ImGui.GetStyle().ItemSpacing.X * 8, 0);
+		SizeCondition = ImGuiCond.Always;
 	}
 
 	public void Dispose()
@@ -23,23 +22,22 @@ internal class ConfigWindow : Window, IDisposable
 		GC.SuppressFinalize(this);
 	}
 
-	public override unsafe void Draw()
+	public override void Draw()
 	{
-		var showInChatWindow = Services.Config.ShowChatNotifications;
-		var showToast = Services.Config.ShowToastNotifications;
-
 		var changed = false;
 
-		if (ImGui.Checkbox("Show in toast", ref showToast))
+		changed |= ImGui.Checkbox("Show in toast", ref Services.Config.ShowToastNotifications);
+
+		changed |= ImGui.Checkbox("Show in chat window", ref Services.Config.ShowChatNotifications);
+
+		if (ImGui.Checkbox("Show passenger list window", ref Services.Config.ShowPassengerListWindow))
 		{
-			Services.Config.ShowToastNotifications = showToast;
+			Services.PassengerListWindow.IsOpen = Services.Config.ShowPassengerListWindow && Services.Condition[ConditionFlag.Mounted];
 			changed = true;
 		}
-
-		if (ImGui.Checkbox("Show in chat window", ref showInChatWindow))
+		if (ImGui.IsItemHovered())
 		{
-			Services.Config.ShowChatNotifications = showInChatWindow;
-			changed = true;
+			ImGui.SetTooltip("Creates a persistent window that lists all passengers while on a multi-seat mount.");
 		}
 
 		if (changed)
@@ -49,25 +47,13 @@ internal class ConfigWindow : Window, IDisposable
 
 		ImGui.NewLine();
 
-		ImGui.Text("Passengers:");
+		var mounted = Services.Condition[ConditionFlag.Mounted];
+		ImGui.Text(mounted ? "Passengers:" : "Not mounted");
 
-		for (byte i = 1; i < 8; i++)
-		{
-			if (Services.MountMembers.TryGetValue(i, out var objId) && Services.ObjectTable.SearchById(objId) is Character passenger)
-			{
-				var passengerStruct = (CharacterStruct*)passenger.Address;
-				var passengerName = passenger.Name.TextValue;
-				var passengerWorldName = Services.DataManager.GetExcelSheet<World>()
-					?.GetRow(passengerStruct->HomeWorld)?.Name.ToString();
+		ImGui.BeginDisabled(!mounted);
 
-				var passengerNameString = passengerName + (char)SeIconChar.CrossWorld + passengerWorldName;
+		Helpers.ImGuiDrawPassengerList();
 
-				ImGui.Text($"{i}. {passengerNameString}");
-			}
-			else
-			{
-				ImGui.Text($"{i}.");
-			}
-		}
+		ImGui.EndDisabled();
 	}
 }

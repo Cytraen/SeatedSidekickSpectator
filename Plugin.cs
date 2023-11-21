@@ -1,7 +1,9 @@
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Command;
-using Dalamud.Interface.Windowing;
+using Dalamud.Game.Text;
 using Dalamud.Plugin;
+using Lumina.Excel.GeneratedSheets;
 using SeatedSidekickSpectator.Windows;
 using CharacterModes = FFXIVClientStructs.FFXIV.Client.Game.Character.Character.CharacterModes;
 using CharacterStruct = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
@@ -11,9 +13,6 @@ namespace SeatedSidekickSpectator;
 internal class Plugin : IDalamudPlugin
 {
 	private const string ConfigWindowCommandName = "/sss";
-	private readonly WindowSystem _windowSystem;
-	private readonly ConfigWindow _configWindow;
-	private readonly SetModeHook _setModeHook;
 
 	public Plugin(DalamudPluginInterface pluginInterface)
 	{
@@ -21,9 +20,10 @@ internal class Plugin : IDalamudPlugin
 
 		Services.Config = Services.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
-		_windowSystem = new WindowSystem("SeatedSidekickSpectator");
-		_configWindow = new ConfigWindow();
-		_windowSystem.AddWindow(_configWindow);
+		Services.ConfigWindow = new ConfigWindow();
+		Services.PassengerListWindow = new PassengerListWindow();
+		Services.WindowSystem.AddWindow(Services.ConfigWindow);
+		Services.WindowSystem.AddWindow(Services.PassengerListWindow);
 
 		Services.CommandManager.AddHandler(ConfigWindowCommandName, new CommandInfo(OnConfigWindowCommand)
 		{
@@ -33,9 +33,28 @@ internal class Plugin : IDalamudPlugin
 		Services.PluginInterface.UiBuilder.Draw += DrawUi;
 		Services.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUi;
 
-		Services.ClientState.TerritoryChanged += OnTerritoryChanged;
-		_setModeHook = new SetModeHook();
+		Services.Condition.ConditionChange += OnConditionChange;
+
 		InitMountMembers();
+		Services.SetModeHook = new SetModeHook();
+		OnConditionChange(ConditionFlag.Mounted, Services.Condition[ConditionFlag.Mounted]);
+	}
+
+	public void OnConditionChange(ConditionFlag condition, bool value)
+	{
+		if (condition is not ConditionFlag.Mounted)
+		{
+			return;
+		}
+		if (!value)
+		{
+			Services.PassengerListWindow.IsOpen = false;
+			return;
+		}
+
+		var seats = Helpers.GetNumberOfSeats() ?? 7;
+
+		Services.PassengerListWindow.IsOpen = seats != 0 && Services.Config.ShowPassengerListWindow;
 	}
 
 	public unsafe void InitMountMembers()
@@ -50,43 +69,31 @@ internal class Plugin : IDalamudPlugin
 			if (charStruct->Mode == CharacterModes.RidingPillion
 				&& charStruct->GameObject.OwnerID == Services.ClientState.LocalPlayer.ObjectId)
 			{
-				Services.MountMembers[charStruct->ModeParam] = charStruct->GameObject.GetObjectID().ObjectID;
+				var passengerName = character.Name.TextValue;
+				var passengerWorldName = Services.DataManager.GetExcelSheet<World>()
+					?.GetRow(charStruct->HomeWorld)?.Name.ToString();
+
+				var passengerNameString = passengerName + (char)SeIconChar.CrossWorld + passengerWorldName;
+
+				Services.MountMembers[charStruct->ModeParam] = new Tuple<uint, string>(charStruct->GameObject.GetObjectID().ObjectID, passengerNameString);
 			}
 		}
 	}
 
-	public unsafe void OnTerritoryChanged(ushort _)
-	{
-		_setModeHook.Disable();
-		Services.Framework.RunOnTick(() =>
-		{
-			for (byte i = 1; i < 8; i++)
-			{
-				if (!Services.MountMembers.TryGetValue(i, out var objId)) continue;
-
-				if (Services.ObjectTable.SearchById(objId) is not Character passenger ||
-					((CharacterStruct*)passenger.Address)->Mode != CharacterModes.RidingPillion)
-				{
-					Services.MountMembers.Remove(i);
-				}
-			}
-		}, delayTicks: 0);
-	}
-
 	public void Dispose()
 	{
-		Services.ClientState.TerritoryChanged -= OnTerritoryChanged;
-		_setModeHook.Dispose();
+		Services.SetModeHook.Dispose();
 
 		Services.CommandManager.RemoveHandler(ConfigWindowCommandName);
-		_windowSystem.RemoveAllWindows();
-		_configWindow.Dispose();
+		Services.WindowSystem.RemoveAllWindows();
+		Services.PassengerListWindow.Dispose();
+		Services.ConfigWindow.Dispose();
 
 		Services.PluginInterface.UiBuilder.Draw -= DrawUi;
 		Services.PluginInterface.UiBuilder.OpenConfigUi -= DrawConfigUi;
 	}
 
-	private void OnConfigWindowCommand(string command, string args)
+	private static void OnConfigWindowCommand(string command, string args)
 	{
 		switch (args)
 		{
@@ -100,13 +107,13 @@ internal class Plugin : IDalamudPlugin
 		}
 	}
 
-	private void DrawUi()
+	private static void DrawUi()
 	{
-		_windowSystem.Draw();
+		Services.WindowSystem.Draw();
 	}
 
-	private void DrawConfigUi()
+	private static void DrawConfigUi()
 	{
-		_configWindow.IsOpen = true;
+		Services.ConfigWindow.IsOpen = true;
 	}
 }

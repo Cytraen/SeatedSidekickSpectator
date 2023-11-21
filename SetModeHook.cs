@@ -1,3 +1,5 @@
+using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Hooking;
@@ -14,6 +16,8 @@ internal unsafe class SetModeHook : IDisposable
 	private delegate void SetModeDelegate(CharacterStruct* a1, CharacterModes a2, byte a3);
 
 	private readonly Hook<SetModeDelegate> _hook;
+
+	private bool _inLoadScreen = false;
 
 	internal SetModeHook()
 	{
@@ -32,64 +36,111 @@ internal unsafe class SetModeHook : IDisposable
 
 		_hook.Original(setCharStruct, newCharMode, newModeParam);
 
-		if (Services.ClientState.LocalPlayer is null)
+		try
 		{
-			// apparently SetMode gets called when going to character select
-			return;
-		}
+			if (Services.ClientState.LocalPlayer is null)
+			{
+				// apparently SetMode gets called when going to character select
+				return;
+			}
 
-		if (Services.ClientState.LocalPlayer!.ObjectId == setCharStruct->GameObject.GetObjectID().ObjectID
-			|| (oldCharMode == newCharMode && oldModeParam == newModeParam)
-			|| (oldCharMode is not CharacterModes.RidingPillion && newCharMode is not CharacterModes.RidingPillion))
-		{
-			return;
-		}
+			var setChar = Services.ObjectTable.CreateObjectReference((nint)setCharStruct);
+			var setCharName = setChar!.Name.TextValue;
+			var setCharWorldName = Services.DataManager.GetExcelSheet<World>()
+				?.GetRow(setCharStruct->HomeWorld)?.Name.ToString();
 
-		var setChar = Services.ObjectTable.CreateObjectReference((nint)setCharStruct);
-		var setCharName = setChar!.Name.TextValue;
-		var setCharWorldName = Services.DataManager.GetExcelSheet<World>()
-			?.GetRow(setCharStruct->HomeWorld)?.Name.ToString();
+			if (setChar.ObjectKind != ObjectKind.Player) return;
 
-		var notifSeString = new SeString(new List<Payload>
-		{
-			new TextPayload(setCharName),
-			new IconPayload(BitmapFontIcon.CrossWorld),
-			new TextPayload(setCharWorldName),
-			new TextPayload(
-				$" {(newCharMode is CharacterModes.RidingPillion ? "boarded" : "exited")} your mount.")
-		});
+			Services.PluginLog.Verbose($"SetMode called for {setCharName}{SeIconChar.CrossWorld.ToIconString()}{setCharWorldName}: '{oldCharMode} {oldModeParam}' -> '{newCharMode} {newModeParam}'");
 
-		if (newCharMode is CharacterModes.RidingPillion)
-		{
-			if (setChar.OwnerId != Services.ClientState.LocalPlayer.ObjectId) return;
+			if (oldCharMode == newCharMode && oldModeParam == newModeParam)
+			{
+				return;
+			}
 
-			if (Services.MountMembers.TryGetValue(newModeParam, out var currentSeatId) &&
-				currentSeatId == setChar.ObjectId) return;
-			Services.MountMembers[newModeParam] = setChar.ObjectId;
+			if (Services.ClientState.LocalPlayer.ObjectId == setCharStruct->GameObject.GetObjectID().ObjectID)
+			{
+				if (_inLoadScreen)
+				{
+					_inLoadScreen = false;
+				}
+
+				Services.Framework.RunOnTick(() =>
+				{
+					for (byte i = 1; i < 8; i++)
+					{
+						if (!Services.MountMembers.TryGetValue(i, out var charInfo)) continue;
+
+						if (Services.ObjectTable.SearchById(charInfo.Item1) is not { } passenger ||
+							((CharacterStruct*)passenger.Address)->Mode != CharacterModes.RidingPillion)
+						{
+							Services.MountMembers.Remove(i);
+						}
+					}
+				}, delayTicks: 0);
+
+				return;
+			}
+
+			if (oldCharMode is not CharacterModes.RidingPillion && newCharMode is not CharacterModes.RidingPillion)
+			{
+				return;
+			}
+
+			var notifSeString = new SeString(new List<Payload>
+			{
+				new TextPayload(setCharName),
+				new IconPayload(BitmapFontIcon.CrossWorld),
+				new TextPayload(setCharWorldName),
+				new TextPayload(
+					$" {(newCharMode is CharacterModes.RidingPillion ? "boarded" : "exited")} your mount.")
+			});
+
+			if (newCharMode is CharacterModes.RidingPillion)
+			{
+				if (setChar.OwnerId != Services.ClientState.LocalPlayer.ObjectId) return;
+
+				if (Services.MountMembers.TryGetValue(newModeParam, out var currentSeatId) &&
+					currentSeatId.Item1 == setCharStruct->GameObject.GetObjectID().ObjectID) return;
+
+				var passengerName = setChar.Name.TextValue;
+				var passengerWorldName = Services.DataManager.GetExcelSheet<World>()
+					?.GetRow(setCharStruct->HomeWorld)?.Name.ToString();
+				var passengerNameString = passengerName + (char)SeIconChar.CrossWorld + passengerWorldName;
+
+				Services.MountMembers[newModeParam] = new Tuple<uint, string>(setCharStruct->GameObject.GetObjectID().ObjectID, passengerNameString);
+			}
+			else
+			{
+				if (!Services.MountMembers.Remove(oldModeParam)) return;
+
+				if (((CharacterStruct*)Services.ClientState.LocalPlayer.Address)->Mode !=
+					CharacterModes.Mounted) return;
+			}
+
 			if (Services.Config.ShowChatNotifications) Services.ChatGui.Print(notifSeString);
 			if (Services.Config.ShowToastNotifications) Services.ToastGui.ShowNormal(notifSeString);
 		}
-		else
+		catch (Exception ex)
 		{
-			if (!Services.MountMembers.Remove(oldModeParam)) return;
-
-			Services.Framework.RunOnTick(() =>
-			{
-				if (((CharacterStruct*)Services.ClientState.LocalPlayer.Address)->Mode !=
-					CharacterModes.Mounted) return;
-				if (Services.Config.ShowChatNotifications) Services.ChatGui.Print(notifSeString);
-				if (Services.Config.ShowToastNotifications) Services.ToastGui.ShowNormal(notifSeString);
-			});
+			Services.PluginLog.Error(ex, "Error in SetModeHook");
 		}
+	}
+
+	internal void OnTerritoryChanged(ushort _)
+	{
+		_inLoadScreen = true;
 	}
 
 	internal void Enable()
 	{
 		_hook.Enable();
+		Services.ClientState.TerritoryChanged += OnTerritoryChanged;
 	}
 
 	internal void Disable()
 	{
+		Services.ClientState.TerritoryChanged -= OnTerritoryChanged;
 		_hook.Disable();
 	}
 
