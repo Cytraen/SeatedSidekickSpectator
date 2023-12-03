@@ -13,7 +13,6 @@ internal class ConfigWindow : Window, IDisposable
 		WindowTitle,
 		ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
 	{
-		Size = new Vector2(Helpers.CalcTextSize(WindowTitle).X + ImGui.GetStyle().ItemSpacing.X * 8, 0);
 		SizeCondition = ImGuiCond.Always;
 	}
 
@@ -24,6 +23,7 @@ internal class ConfigWindow : Window, IDisposable
 
 	public override void Draw()
 	{
+		Size = new Vector2(Helpers.CalcTextSize(WindowTitle).X + ImGui.GetStyle().ItemSpacing.X * 8, 0);
 		var changed = false;
 
 		changed |= ImGui.Checkbox("Show in toast", ref Services.Config.ShowToastNotifications);

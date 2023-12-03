@@ -14,18 +14,18 @@ internal class PassengerListWindow : Window, IDisposable
 		| ImGuiWindowFlags.NoTitleBar
 		| (Services.Config.PassengerListWindowLocked ? ImGuiWindowFlags.NoMove : 0))
 	{
-		Size = new Vector2(0, 0);
 		SizeCondition = ImGuiCond.Always;
+	}
+
+	public override void Draw()
+	{
 		SizeConstraints = new WindowSizeConstraints
 		{
 			MinimumSize = new Vector2(Helpers.CalcTextSize($"MWMWMWMW MWMWMWMW{SeIconChar.CrossWorld}Adamantoise").X +
 									  ImGui.GetStyle().ItemSpacing.X * 2, 0),
 			MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
 		};
-	}
 
-	public override void Draw()
-	{
 		ImGui.Text("Passengers:");
 
 		if (ImGui.IsWindowHovered())
