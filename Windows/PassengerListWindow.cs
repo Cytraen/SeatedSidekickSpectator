@@ -12,9 +12,9 @@ internal class PassengerListWindow : Window, IDisposable
 		ImGuiWindowFlags.NoScrollbar
 		| ImGuiWindowFlags.NoScrollWithMouse
 		| ImGuiWindowFlags.NoTitleBar
+		| ImGuiWindowFlags.AlwaysAutoResize
 		| (Services.Config.PassengerListWindowLocked ? ImGuiWindowFlags.NoMove : 0))
 	{
-		SizeCondition = ImGuiCond.Always;
 	}
 
 	public override void Draw()
