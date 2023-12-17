@@ -13,7 +13,7 @@ internal class PassengerListWindow : Window, IDisposable
 		| ImGuiWindowFlags.NoScrollWithMouse
 		| ImGuiWindowFlags.NoTitleBar
 		| ImGuiWindowFlags.AlwaysAutoResize
-		| (Services.Config.PassengerListWindowLocked ? ImGuiWindowFlags.NoMove : 0))
+		| ImGuiWindowFlags.NoMove)
 	{
 	}
 
@@ -32,13 +32,11 @@ internal class PassengerListWindow : Window, IDisposable
 		{
 			ImGui.SameLine();
 			var windowLockText =
-				$"(window {(Services.Config.PassengerListWindowLocked ? "locked" : "unlocked")}, right-click to {(Services.Config.PassengerListWindowLocked ? "unlock" : "lock")}.)";
+				$"(window {((Flags & ImGuiWindowFlags.NoMove) == 0 ? "unlocked" : "locked")}, right-click to {((Flags & ImGuiWindowFlags.NoMove) == 0 ? "lock" : "unlock")}.)";
 			ImGui.SetCursorPosX(ImGui.GetWindowSize().X - Helpers.CalcTextSize(windowLockText).X - ImGui.GetStyle().WindowPadding.X);
 			ImGui.Text(windowLockText);
 			if (ImGui.IsMouseClicked(ImGuiMouseButton.Right))
 			{
-				Services.Config.PassengerListWindowLocked ^= true;
-				Services.Config.Save();
 				Flags ^= ImGuiWindowFlags.NoMove;
 			}
 		}

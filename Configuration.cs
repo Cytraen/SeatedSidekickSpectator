@@ -18,9 +18,6 @@ public class Configuration : IPluginConfiguration
 	[JsonInclude]
 	public bool ShowPassengerListWindow = false;
 
-	[JsonInclude]
-	public bool PassengerListWindowLocked = false;
-
 	private static string FilePath => Services.PluginInterface.ConfigFile.FullName;
 
 	public static void Load()
