@@ -3,17 +3,16 @@ using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Hooking;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using Lumina.Excel.GeneratedSheets;
-using CharacterModes = FFXIVClientStructs.FFXIV.Client.Game.Character.Character.CharacterModes;
-using CharacterStruct = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
 
 namespace SeatedSidekickSpectator;
 
 internal unsafe class SetModeHook : IDisposable
 {
-	private const string SetModeSig = "E8 ?? ?? ?? ?? 48 8B 4B 08 44 8B CF";
+	private const string SetModeSig = "E8 ?? ?? ?? ?? 48 8B 4F ?? E8 ?? ?? ?? ?? 48 8B 4C 24 ??";
 
-	private delegate void SetModeDelegate(CharacterStruct* a1, CharacterModes a2, byte a3);
+	private delegate void SetModeDelegate(Character* a1, CharacterModes a2, byte a3);
 
 	private readonly Hook<SetModeDelegate> _hook;
 
@@ -28,7 +27,7 @@ internal unsafe class SetModeHook : IDisposable
 		Enable();
 	}
 
-	private void SetModeDetour(CharacterStruct* setCharStruct, CharacterModes newCharMode,
+	private void SetModeDetour(Character* setCharStruct, CharacterModes newCharMode,
 		byte newModeParam)
 	{
 		var oldCharMode = setCharStruct->Mode;
@@ -58,7 +57,7 @@ internal unsafe class SetModeHook : IDisposable
 				return;
 			}
 
-			if (Services.ClientState.LocalPlayer.ObjectId == setCharStruct->GameObject.GetObjectID().ObjectID)
+			if (Services.ClientState.LocalPlayer.GameObjectId == setCharStruct->GameObject.GetGameObjectId().ObjectId)
 			{
 				if (_inLoadScreen)
 				{
@@ -72,7 +71,7 @@ internal unsafe class SetModeHook : IDisposable
 						if (!Services.MountMembers.TryGetValue(i, out var charInfo)) continue;
 
 						if (Services.ObjectTable.SearchById(charInfo.Item1) is not { } passenger ||
-							((CharacterStruct*)passenger.Address)->Mode != CharacterModes.RidingPillion)
+							((Character*)passenger.Address)->Mode != CharacterModes.RidingPillion)
 						{
 							Services.MountMembers.Remove(i);
 						}
@@ -98,23 +97,23 @@ internal unsafe class SetModeHook : IDisposable
 
 			if (newCharMode is CharacterModes.RidingPillion)
 			{
-				if (setChar.OwnerId != Services.ClientState.LocalPlayer.ObjectId) return;
+				if (setChar.OwnerId != Services.ClientState.LocalPlayer.GameObjectId) return;
 
 				if (Services.MountMembers.TryGetValue(newModeParam, out var currentSeatId) &&
-					currentSeatId.Item1 == setCharStruct->GameObject.GetObjectID().ObjectID) return;
+					currentSeatId.Item1 == setCharStruct->GameObject.GetGameObjectId().ObjectId) return;
 
 				var passengerName = setChar.Name.TextValue;
 				var passengerWorldName = Services.DataManager.GetExcelSheet<World>()
 					?.GetRow(setCharStruct->HomeWorld)?.Name.ToString();
 				var passengerNameString = passengerName + (char)SeIconChar.CrossWorld + passengerWorldName;
 
-				Services.MountMembers[newModeParam] = new Tuple<uint, string>(setCharStruct->GameObject.GetObjectID().ObjectID, passengerNameString);
+				Services.MountMembers[newModeParam] = new Tuple<uint, string>(setCharStruct->GameObject.GetGameObjectId().ObjectId, passengerNameString);
 			}
 			else
 			{
 				if (!Services.MountMembers.Remove(oldModeParam)) return;
 
-				if (((CharacterStruct*)Services.ClientState.LocalPlayer.Address)->Mode !=
+				if (((Character*)Services.ClientState.LocalPlayer.Address)->Mode !=
 					CharacterModes.Mounted) return;
 			}
 

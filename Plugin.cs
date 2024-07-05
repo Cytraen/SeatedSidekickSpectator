@@ -3,10 +3,9 @@ using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Command;
 using Dalamud.Game.Text;
 using Dalamud.Plugin;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using Lumina.Excel.GeneratedSheets;
 using SeatedSidekickSpectator.Windows;
-using CharacterModes = FFXIVClientStructs.FFXIV.Client.Game.Character.Character.CharacterModes;
-using CharacterStruct = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
 
 namespace SeatedSidekickSpectator;
 
@@ -14,7 +13,7 @@ internal class Plugin : IDalamudPlugin
 {
 	private const string ConfigWindowCommandName = "/sss";
 
-	public Plugin(DalamudPluginInterface pluginInterface)
+	public Plugin(IDalamudPluginInterface pluginInterface)
 	{
 		pluginInterface.Create<Services>();
 
@@ -59,15 +58,15 @@ internal class Plugin : IDalamudPlugin
 
 	public unsafe void InitMountMembers()
 	{
-		if (Services.ClientState.LocalPlayer is null || ((CharacterStruct*)Services.ClientState.LocalPlayer.Address)->Mode != CharacterModes.Mounted) return;
+		if (Services.ClientState.LocalPlayer is null || ((Character*)Services.ClientState.LocalPlayer.Address)->Mode != CharacterModes.Mounted) return;
 
 		for (var i = 0; i < 100; i++)
 		{
-			if (Services.ObjectTable[i * 2] is not Character character) continue;
+			if (Services.ObjectTable[i * 2] is not ICharacter character) continue;
 
-			var charStruct = (CharacterStruct*)character.Address;
+			var charStruct = (Character*)character.Address;
 			if (charStruct->Mode == CharacterModes.RidingPillion
-				&& charStruct->GameObject.OwnerID == Services.ClientState.LocalPlayer.ObjectId)
+				&& charStruct->GameObject.OwnerId == Services.ClientState.LocalPlayer.GameObjectId)
 			{
 				var passengerName = character.Name.TextValue;
 				var passengerWorldName = Services.DataManager.GetExcelSheet<World>()
@@ -75,7 +74,7 @@ internal class Plugin : IDalamudPlugin
 
 				var passengerNameString = passengerName + (char)SeIconChar.CrossWorld + passengerWorldName;
 
-				Services.MountMembers[charStruct->ModeParam] = new Tuple<uint, string>(charStruct->GameObject.GetObjectID().ObjectID, passengerNameString);
+				Services.MountMembers[charStruct->ModeParam] = new Tuple<uint, string>(charStruct->GameObject.GetGameObjectId().ObjectId, passengerNameString);
 			}
 		}
 	}

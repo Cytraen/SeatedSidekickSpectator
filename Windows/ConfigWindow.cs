@@ -48,7 +48,17 @@ internal class ConfigWindow : Window, IDisposable
 		ImGui.NewLine();
 
 		var mounted = Services.Condition[ConditionFlag.Mounted];
-		ImGui.Text(mounted ? "Passengers:" : "Not mounted");
+		if (mounted)
+		{
+			var passengerCount = Helpers.GetNumberOfSeats();
+			ImGui.Text(passengerCount == 0
+				? "Mounted on single-rider mount"
+				: "Passengers:");
+		}
+		else
+		{
+			ImGui.Text("Not mounted");
+		}
 
 		ImGui.BeginDisabled(!mounted);
 
