@@ -4,7 +4,7 @@ using Dalamud.Game.Command;
 using Dalamud.Game.Text;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 using SeatedSidekickSpectator.Windows;
 
 namespace SeatedSidekickSpectator;
@@ -70,7 +70,7 @@ internal class Plugin : IDalamudPlugin
 			{
 				var passengerName = character.Name.TextValue;
 				var passengerWorldName = Services.DataManager.GetExcelSheet<World>()
-					?.GetRow(charStruct->HomeWorld)?.Name.ToString();
+					?.GetRow(charStruct->HomeWorld).Name.ToString();
 
 				var passengerNameString = passengerName + (char)SeIconChar.CrossWorld + passengerWorldName;
 

@@ -1,6 +1,6 @@
 using Dalamud.Interface.Utility;
 using ImGuiNET;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 using System.Numerics;
 using CharacterStruct = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
 
@@ -46,7 +46,7 @@ internal static class Helpers
 	{
 		if (Services.ClientState.LocalPlayer is null) return null;
 		var mountId = ((CharacterStruct*)Services.ClientState.LocalPlayer.Address)->Mount.MountId;
-		return Services.DataManager.GetExcelSheet<Mount>()?.GetRow(mountId)?.ExtraSeats;
+		return Services.DataManager.GetExcelSheet<Mount>()?.GetRow(mountId).ExtraSeats;
 	}
 
 	public static void ImGuiDrawPassengerList()

@@ -4,26 +4,20 @@ using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Hooking;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 
 namespace SeatedSidekickSpectator;
 
 internal unsafe class SetModeHook : IDisposable
 {
-	private const string SetModeSig = "E8 ?? ?? ?? ?? 48 8B 4F ?? E8 ?? ?? ?? ?? 48 8B 4C 24 ??";
-
-	private delegate void SetModeDelegate(Character* a1, CharacterModes a2, byte a3);
-
-	private readonly Hook<SetModeDelegate> _hook;
+	private readonly Hook<Character.Delegates.SetMode> _hook;
 
 	private bool _inLoadScreen = false;
 
 	internal SetModeHook()
 	{
-		if (!Services.SigScanner.TryScanText(SetModeSig, out var ptr))
-			throw new NullReferenceException("'SetModeHook' sig could not be found");
-
-		_hook = Services.GameInteropProvider.HookFromAddress<SetModeDelegate>(ptr, SetModeDetour);
+		var ptr = Services.SigScanner.ScanText(Character.Addresses.SetMode.String);
+		_hook = Services.GameInteropProvider.HookFromAddress<Character.Delegates.SetMode>(ptr, SetModeDetour);
 		Enable();
 	}
 
@@ -46,7 +40,7 @@ internal unsafe class SetModeHook : IDisposable
 			var setChar = Services.ObjectTable.CreateObjectReference((nint)setCharStruct);
 			var setCharName = setChar!.Name.TextValue;
 			var setCharWorldName = Services.DataManager.GetExcelSheet<World>()
-				?.GetRow(setCharStruct->HomeWorld)?.Name.ToString();
+				?.GetRow(setCharStruct->HomeWorld).Name.ToString();
 
 			if (setChar.ObjectKind != ObjectKind.Player) return;
 
@@ -104,7 +98,7 @@ internal unsafe class SetModeHook : IDisposable
 
 				var passengerName = setChar.Name.TextValue;
 				var passengerWorldName = Services.DataManager.GetExcelSheet<World>()
-					?.GetRow(setCharStruct->HomeWorld)?.Name.ToString();
+					?.GetRow(setCharStruct->HomeWorld).Name.ToString();
 				var passengerNameString = passengerName + (char)SeIconChar.CrossWorld + passengerWorldName;
 
 				Services.MountMembers[newModeParam] = new Tuple<uint, string>(setCharStruct->GameObject.GetGameObjectId().ObjectId, passengerNameString);

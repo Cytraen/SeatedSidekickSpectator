@@ -35,7 +35,7 @@ internal class Services
 
 	internal static Configuration Config = null!;
 
-	internal static Dictionary<byte, Tuple<uint, string>> MountMembers = new();
+	internal static Dictionary<byte, Tuple<uint, string>> MountMembers = [];
 
 	internal static WindowSystem WindowSystem = new("SeatedSidekickSpectator");
 
