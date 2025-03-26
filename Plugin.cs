@@ -1,11 +1,9 @@
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Types;
-using Dalamud.Game.Command;
 using Dalamud.Game.Text;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using Lumina.Excel.Sheets;
-using SeatedSidekickSpectator.Windows;
 
 namespace SeatedSidekickSpectator;
 
@@ -17,26 +15,34 @@ internal class Plugin : IDalamudPlugin
 	{
 		pluginInterface.Create<Services>();
 
-		Services.Config = Services.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+		Services.Config =
+			Services.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
-		Services.ConfigWindow = new ConfigWindow();
-		Services.PassengerListWindow = new PassengerListWindow();
+		Services.ConfigWindow = new();
+		Services.PassengerListWindow = new();
 		Services.WindowSystem.AddWindow(Services.ConfigWindow);
 		Services.WindowSystem.AddWindow(Services.PassengerListWindow);
 
-		Services.CommandManager.AddHandler(ConfigWindowCommandName, new CommandInfo(OnConfigWindowCommand)
-		{
-			HelpMessage = "Opens the Seated Sidekick Spectator config window."
-		});
+		Services.CommandManager.AddHandler(
+			ConfigWindowCommandName,
+			new(OnConfigWindowCommand)
+			{
+				HelpMessage = "Opens the Seated Sidekick Spectator config window.",
+			}
+		);
 
 		Services.PluginInterface.UiBuilder.Draw += DrawUi;
 		Services.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUi;
 
 		Services.Condition.ConditionChange += OnConditionChange;
 
-		InitMountMembers();
-		Services.SetModeHook = new SetModeHook();
-		OnConditionChange(ConditionFlag.Mounted, Services.Condition[ConditionFlag.Mounted]);
+		Services.Framework.RunOnTick(() =>
+		{
+			InitMountMembers();
+			OnConditionChange(ConditionFlag.Mounted, Services.Condition[ConditionFlag.Mounted]);
+		});
+
+		Services.SetModeHook = new();
 	}
 
 	public void OnConditionChange(ConditionFlag condition, bool value)
@@ -58,23 +64,37 @@ internal class Plugin : IDalamudPlugin
 
 	public unsafe void InitMountMembers()
 	{
-		if (Services.ClientState.LocalPlayer is null || ((Character*)Services.ClientState.LocalPlayer.Address)->Mode != CharacterModes.Mounted) return;
+		if (
+			Services.ClientState.LocalPlayer is null
+			|| ((Character*)Services.ClientState.LocalPlayer.Address)->Mode
+				!= CharacterModes.Mounted
+		)
+			return;
 
 		for (var i = 0; i < 100; i++)
 		{
-			if (Services.ObjectTable[i * 2] is not ICharacter character) continue;
+			if (Services.ObjectTable[i * 2] is not ICharacter character)
+				continue;
 
 			var charStruct = (Character*)character.Address;
-			if (charStruct->Mode == CharacterModes.RidingPillion
-				&& charStruct->GameObject.OwnerId == Services.ClientState.LocalPlayer.GameObjectId)
+			if (
+				charStruct->Mode == CharacterModes.RidingPillion
+				&& charStruct->GameObject.OwnerId == Services.ClientState.LocalPlayer.GameObjectId
+			)
 			{
 				var passengerName = character.Name.TextValue;
-				var passengerWorldName = Services.DataManager.GetExcelSheet<World>()
-					?.GetRow(charStruct->HomeWorld).Name.ToString();
+				var passengerWorldName = Services
+					.DataManager.GetExcelSheet<World>()
+					.GetRow(charStruct->HomeWorld)
+					.Name.ToString();
 
-				var passengerNameString = passengerName + (char)SeIconChar.CrossWorld + passengerWorldName;
+				var passengerNameString =
+					passengerName + (char)SeIconChar.CrossWorld + passengerWorldName;
 
-				Services.MountMembers[charStruct->ModeParam] = new Tuple<uint, string>(charStruct->GameObject.GetGameObjectId().ObjectId, passengerNameString);
+				Services.MountMembers[charStruct->ModeParam] = new Tuple<uint, string>(
+					charStruct->GameObject.GetGameObjectId().ObjectId,
+					passengerNameString
+				);
 			}
 		}
 	}

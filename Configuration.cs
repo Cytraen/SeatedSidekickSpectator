@@ -1,6 +1,6 @@
-using Dalamud.Configuration;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Dalamud.Configuration;
 
 namespace SeatedSidekickSpectator;
 
@@ -24,7 +24,9 @@ public class Configuration : IPluginConfiguration
 	{
 		if (File.Exists(FilePath))
 		{
-			Services.Config = JsonSerializer.Deserialize<Configuration>(File.ReadAllText(FilePath))!;
+			Services.Config = JsonSerializer.Deserialize<Configuration>(
+				File.ReadAllText(FilePath)
+			)!;
 		}
 		else
 		{

@@ -1,7 +1,7 @@
+using System.Numerics;
 using Dalamud.Interface.Utility;
 using ImGuiNET;
 using Lumina.Excel.Sheets;
-using System.Numerics;
 using CharacterStruct = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
 
 namespace SeatedSidekickSpectator;
@@ -21,7 +21,12 @@ internal static class Helpers
 	/// <param name="font"></param>
 	/// <param name="fontSize"></param>
 	/// <returns></returns>
-	public static Vector2 CalcTextSize(string text, float scale = 1f, ImFontPtr? font = null, float fontSize = -1)
+	public static Vector2 CalcTextSize(
+		string text,
+		float scale = 1f,
+		ImFontPtr? font = null,
+		float fontSize = -1
+	)
 	{
 		var fontSizeMultiplier = 1f;
 
@@ -32,7 +37,8 @@ internal static class Helpers
 			ImGui.PushFont(font.Value);
 		}
 
-		var textSize = ImGui.CalcTextSize(text) / ImGuiHelpers.GlobalScale * scale * fontSizeMultiplier;
+		var textSize =
+			ImGui.CalcTextSize(text) / ImGuiHelpers.GlobalScale * scale * fontSizeMultiplier;
 
 		if (font.HasValue)
 		{
@@ -44,9 +50,10 @@ internal static class Helpers
 
 	public static unsafe ushort? GetNumberOfSeats()
 	{
-		if (Services.ClientState.LocalPlayer is null) return null;
+		if (Services.ClientState.LocalPlayer is null)
+			return null;
 		var mountId = ((CharacterStruct*)Services.ClientState.LocalPlayer.Address)->Mount.MountId;
-		return Services.DataManager.GetExcelSheet<Mount>()?.GetRow(mountId).ExtraSeats;
+		return Services.DataManager.GetExcelSheet<Mount>().GetRow(mountId).ExtraSeats;
 	}
 
 	public static void ImGuiDrawPassengerList()
