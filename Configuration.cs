@@ -1,43 +1,36 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using Dalamud.Configuration;
 
 namespace SeatedSidekickSpectator;
 
-[Serializable]
-public class Configuration : IPluginConfiguration
+public sealed class Configuration
 {
-	public int Version { get; set; } = 0;
+	public bool ShowToastNotifications { get; set; } = true;
 
-	[JsonInclude]
-	public bool ShowToastNotifications = true;
+	public bool ShowChatNotifications { get; set; } = false;
 
-	[JsonInclude]
-	public bool ShowChatNotifications = false;
-
-	[JsonInclude]
-	public bool ShowPassengerListWindow = false;
+	public bool ShowPassengerListWindow { get; set; } = false;
 
 	private static string FilePath => Services.PluginInterface.ConfigFile.FullName;
 
-	public static void Load()
+	public static Configuration Load()
 	{
-		if (File.Exists(FilePath))
+		if (!File.Exists(Services.PluginInterface.ConfigFile.FullName))
 		{
-			Services.Config = JsonSerializer.Deserialize<Configuration>(
-				File.ReadAllText(FilePath)
-			)!;
+			return new Configuration();
 		}
-		else
-		{
-			Services.Config = new Configuration();
 
-			Services.Config.Save();
-		}
+		var bytes = File.ReadAllBytes(Services.PluginInterface.ConfigFile.FullName);
+		return JsonSerializer.Deserialize<Configuration>(bytes) ?? new Configuration();
+	}
+
+	public static void Save(Configuration config)
+	{
+		config.Save();
 	}
 
 	public void Save()
 	{
-		Services.PluginInterface.SavePluginConfig(this);
+		var str = JsonSerializer.Serialize(this);
+		File.WriteAllText(Services.PluginInterface.ConfigFile.FullName, str);
 	}
 }

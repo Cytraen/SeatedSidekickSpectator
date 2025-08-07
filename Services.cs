@@ -1,13 +1,11 @@
 using Dalamud.Game;
-using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
-using SeatedSidekickSpectator.Windows;
 
 namespace SeatedSidekickSpectator;
 
-internal class Services
+internal sealed class Services
 {
 	[PluginService]
 	public static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
@@ -47,13 +45,7 @@ internal class Services
 
 	internal static Configuration Config = null!;
 
-	internal static Dictionary<byte, Tuple<uint, string>> MountMembers = [];
-
-	internal static WindowSystem WindowSystem = new("SeatedSidekickSpectator");
-
-	internal static ConfigWindow ConfigWindow = null!;
-
-	internal static PassengerListWindow PassengerListWindow = null!;
-
 	internal static SetModeHook SetModeHook = null!;
+
+	internal static readonly Dictionary<byte, Tuple<uint, string>> MountMembers = [];
 }

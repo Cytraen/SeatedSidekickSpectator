@@ -1,11 +1,11 @@
 using System.Numerics;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Game.Text;
 using Dalamud.Interface.Windowing;
-using ImGuiNET;
 
 namespace SeatedSidekickSpectator.Windows;
 
-internal class PassengerListWindow : Window, IDisposable
+internal sealed class PassengerListWindow : Window
 {
 	internal PassengerListWindow()
 		: base(
@@ -21,12 +21,15 @@ internal class PassengerListWindow : Window, IDisposable
 	{
 		SizeConstraints = new WindowSizeConstraints
 		{
-			MinimumSize = new(
-				Helpers.CalcTextSize($"MWMWMWMW MWMWMWMW{SeIconChar.CrossWorld}Adamantoise").X
-					+ ImGui.GetStyle().ItemSpacing.X * 2,
+			MinimumSize = new Vector2(
+				Helpers
+					.CalcTextSize(
+						$"MWMWMWMW MWMWMWMW{SeIconChar.CrossWorld.ToIconChar()}Adamantoise"
+					)
+					.X + (ImGui.GetStyle().ItemSpacing.X * 2),
 				0
 			),
-			MaximumSize = new(float.MaxValue, float.MaxValue),
+			MaximumSize = new Vector2(float.MaxValue, float.MaxValue),
 		};
 
 		ImGui.Text("Passengers:");
@@ -34,8 +37,9 @@ internal class PassengerListWindow : Window, IDisposable
 		if (ImGui.IsWindowHovered())
 		{
 			ImGui.SameLine();
+			var isLocked = (Flags & ImGuiWindowFlags.NoMove) == ImGuiWindowFlags.NoMove;
 			var windowLockText =
-				$"(window {((Flags & ImGuiWindowFlags.NoMove) == 0 ? "unlocked" : "locked")}, right-click to {((Flags & ImGuiWindowFlags.NoMove) == 0 ? "lock" : "unlock")}.)";
+				$"(window {(isLocked ? "locked" : "unlocked")}, right-click to {(isLocked ? "unlock" : "lock")}.)";
 			ImGui.SetCursorPosX(
 				ImGui.GetWindowSize().X
 					- Helpers.CalcTextSize(windowLockText).X
@@ -49,10 +53,5 @@ internal class PassengerListWindow : Window, IDisposable
 		}
 
 		Helpers.ImGuiDrawPassengerList();
-	}
-
-	public void Dispose()
-	{
-		GC.SuppressFinalize(this);
 	}
 }

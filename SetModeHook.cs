@@ -8,7 +8,7 @@ using Lumina.Excel.Sheets;
 
 namespace SeatedSidekickSpectator;
 
-internal unsafe class SetModeHook : IDisposable
+internal sealed unsafe class SetModeHook : IDisposable
 {
 	private readonly Hook<Character.Delegates.SetMode> _hook;
 
@@ -184,6 +184,5 @@ internal unsafe class SetModeHook : IDisposable
 	{
 		Disable();
 		_hook.Dispose();
-		GC.SuppressFinalize(this);
 	}
 }
