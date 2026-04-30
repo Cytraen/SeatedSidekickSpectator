@@ -1,8 +1,8 @@
-<Project Sdk="Dalamud.NET.Sdk/14.0.1">
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
 	<PropertyGroup>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Authors>Cytraen</Authors>
-		<Version>1.0.2</Version>
+		<Version>1.0.3</Version>
 		<RepositoryUrl>https://github.com/Cytraen/SeatedSidekickSpectator/</RepositoryUrl>
 		<Use_Dalamud_Newtonsoft_Json>false</Use_Dalamud_Newtonsoft_Json>
 	</PropertyGroup>

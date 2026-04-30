@@ -71,8 +71,8 @@ internal sealed class Plugin : IDalamudPlugin
 	private static unsafe void InitMountMembers()
 	{
 		if (
-			Services.ClientState.LocalPlayer is null
-			|| ((Character*)Services.ClientState.LocalPlayer.Address)->Mode
+			Services.ObjectTable.LocalPlayer is null
+			|| ((Character*)Services.ObjectTable.LocalPlayer.Address)->Mode
 				!= CharacterModes.Mounted
 		)
 			return;
@@ -85,7 +85,7 @@ internal sealed class Plugin : IDalamudPlugin
 			var charStruct = (Character*)character.Address;
 			if (
 				charStruct->Mode == CharacterModes.RidingPillion
-				&& charStruct->GameObject.OwnerId == Services.ClientState.LocalPlayer.GameObjectId
+				&& charStruct->GameObject.OwnerId == Services.ObjectTable.LocalPlayer.GameObjectId
 			)
 			{
 				var passengerName = character.Name.TextValue;

@@ -50,9 +50,9 @@ internal static class Helpers
 
 	public static unsafe ushort? GetNumberOfSeats()
 	{
-		if (Services.ClientState.LocalPlayer is null)
+		if (Services.ObjectTable.LocalPlayer is null)
 			return null;
-		var mountId = ((CharacterStruct*)Services.ClientState.LocalPlayer.Address)->Mount.MountId;
+		var mountId = ((CharacterStruct*)Services.ObjectTable.LocalPlayer.Address)->Mount.MountId;
 		return Services.DataManager.GetExcelSheet<Mount>().GetRow(mountId).ExtraSeats;
 	}
 

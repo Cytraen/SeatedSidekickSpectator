@@ -37,7 +37,7 @@ internal sealed unsafe class SetModeHook : IDisposable
 
 		try
 		{
-			if (Services.ClientState.LocalPlayer is null)
+			if (Services.ObjectTable.LocalPlayer is null)
 			{
 				// apparently SetMode gets called when going to character select
 				return;
@@ -50,7 +50,7 @@ internal sealed unsafe class SetModeHook : IDisposable
 				.GetRow(setCharStruct->HomeWorld)
 				.Name.ToString();
 
-			if (setChar.ObjectKind != ObjectKind.Player)
+			if (setChar.ObjectKind != ObjectKind.Pc)
 				return;
 
 			Services.PluginLog.Verbose(
@@ -63,7 +63,7 @@ internal sealed unsafe class SetModeHook : IDisposable
 			}
 
 			if (
-				Services.ClientState.LocalPlayer.GameObjectId
+				Services.ObjectTable.LocalPlayer.GameObjectId
 				== setCharStruct->GameObject.GetGameObjectId().ObjectId
 			)
 			{
@@ -118,7 +118,7 @@ internal sealed unsafe class SetModeHook : IDisposable
 
 			if (newCharMode is CharacterModes.RidingPillion)
 			{
-				if (setChar.OwnerId != Services.ClientState.LocalPlayer.GameObjectId)
+				if (setChar.OwnerId != Services.ObjectTable.LocalPlayer.GameObjectId)
 					return;
 
 				if (
@@ -146,7 +146,7 @@ internal sealed unsafe class SetModeHook : IDisposable
 					return;
 
 				if (
-					((Character*)Services.ClientState.LocalPlayer.Address)->Mode
+					((Character*)Services.ObjectTable.LocalPlayer.Address)->Mode
 					!= CharacterModes.Mounted
 				)
 					return;
@@ -163,7 +163,7 @@ internal sealed unsafe class SetModeHook : IDisposable
 		}
 	}
 
-	internal void OnTerritoryChanged(ushort _)
+	internal void OnTerritoryChanged(uint _)
 	{
 		_inLoadScreen = true;
 	}
